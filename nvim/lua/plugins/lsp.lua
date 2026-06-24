@@ -15,8 +15,8 @@ return {
   {
     "neovim/nvim-lspconfig",
     dependencies = {
-      "williamboman/mason.nvim",
-      "williamboman/mason-lspconfig.nvim",
+      "mason-org/mason.nvim",
+      "mason-org/mason-lspconfig.nvim",
       -- Shows visual loading status for LSP servers
       { "j-hui/fidget.nvim", opts = {} },
     },

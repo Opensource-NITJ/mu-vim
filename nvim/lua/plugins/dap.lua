@@ -19,7 +19,7 @@ return {
       "rcarriga/nvim-dap-ui",
       "nvim-neotest/nvim-nio", -- Required dependency for dap-ui
       "theHamsta/nvim-dap-virtual-text",
-      "williamboman/mason.nvim",
+      "mason-org/mason.nvim",
     },
     config = function()
       local dap = require("dap")
