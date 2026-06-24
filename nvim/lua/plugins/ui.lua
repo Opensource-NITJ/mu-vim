@@ -157,11 +157,17 @@ return {
       -- Set color for the tips (Peach / Warm Yellow highlight)
       vim.api.nvim_set_hl(0, "AlphaTips", { fg = "#f9e2af", italic = true })
 
-      -- Pick a random item on launch for footer (fallback before dynamic config)
-      dashboard.section.footer.val = selected_tip
-      
-      -- Format footer style (Catppuccin Lavender/Muted Pink color)
-      vim.api.nvim_set_hl(0, "AlphaFooter", { fg = "#f5c2e7", italic = true })
+      -- Set up the dynamic footer (using lazy.nvim statistics)
+      dashboard.section.footer.val = function()
+        local stats = require("lazy").stats()
+        local count = stats and stats.count or 0
+        local startuptime = stats and stats.startuptime or 0
+        local ms = (math.floor(startuptime * 100 + 0.5) / 100)
+        return "⚡ Loaded " .. count .. " plugins in " .. ms .. "ms"
+      end
+
+      -- Format footer style (Soft green color for load stats)
+      vim.api.nvim_set_hl(0, "AlphaFooter", { fg = "#a6e3a1", italic = true })
       dashboard.section.footer.opts.hl = "AlphaFooter"
 
       -- Reconstruct the layout to insert the tips section right below the header
