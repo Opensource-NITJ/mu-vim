@@ -33,6 +33,8 @@ zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' # Case-insensitive aut
 alias vim="nvim"
 alias vi="nvim"
 alias v="nvim"
+alias muvim="nvim"
+
 
 # Common quick commands
 alias ll="ls -lah"

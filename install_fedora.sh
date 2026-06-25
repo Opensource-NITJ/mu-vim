@@ -71,9 +71,9 @@ if [ "$IS_NEOVIM_OK" = false ]; then
     NVIM_VERSION=$(nvim --version | head -n 1 | awk '{print $2}' | sed 's/v//')
     if ! awk -v ver="$NVIM_VERSION" 'BEGIN { exit (ver >= 0.10) ? 0 : 1 }'; then
         log_warn "dnf's neovim ($NVIM_VERSION) is too old. Installing prebuilt binary instead."
-        curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
-        sudo tar -C /usr/local -xzf nvim-linux64.tar.gz --strip-components=1
-        rm nvim-linux64.tar.gz
+        curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+        sudo tar -C /usr/local -xzf nvim-linux-x86_64.tar.gz --strip-components=1
+        rm nvim-linux-x86_64.tar.gz
     fi
     log_success "Neovim installed successfully"
 fi

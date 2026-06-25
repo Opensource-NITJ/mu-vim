@@ -48,6 +48,61 @@ fi
 
 log_step "Detected Operating System: $OS_TYPE"
 
+# --- Detect WSL (Windows Subsystem for Linux) ---
+IS_WSL=false
+if [[ "$OS_TYPE" == "linux" ]] && grep -q -i "microsoft" /proc/version 2>/dev/null; then
+  IS_WSL=true
+  log_step "WSL Environment Detected"
+fi
+
+get_windows_home() {
+  local win_home=""
+  if command -v cmd.exe &>/dev/null; then
+    local win_home_raw
+    win_home_raw=$(cmd.exe /c "echo %USERPROFILE%" 2>/dev/null | tr -d '\r')
+    if [ -n "$win_home_raw" ] && command -v wslpath &>/dev/null; then
+      win_home=$(wslpath "$win_home_raw")
+    fi
+  fi
+  if [ -z "$win_home" ]; then
+    if [ -d "/mnt/c/Users/$USER" ]; then
+      win_home="/mnt/c/Users/$USER"
+    else
+      for dir in /mnt/c/Users/*; do
+        if [ -d "$dir" ]; then
+          local base
+          base=$(basename "$dir")
+          if [ "$base" != "Public" ] && [ "$base" != "Default" ] && [ "$base" != "All Users" ] && [ "$base" != "desktop.ini" ]; then
+            win_home="$dir"
+            break
+          fi
+        fi
+      done
+    fi
+  fi
+  echo "$win_home"
+}
+
+get_windows_localappdata() {
+  local win_lad=""
+  if command -v cmd.exe &>/dev/null; then
+    local win_lad_raw
+    win_lad_raw=$(cmd.exe /c "echo %LOCALAPPDATA%" 2>/dev/null | tr -d '\r')
+    if [ -n "$win_lad_raw" ] && command -v wslpath &>/dev/null; then
+      win_lad=$(wslpath "$win_lad_raw")
+    fi
+  fi
+  if [ -z "$win_lad" ]; then
+    local win_home
+    win_home=$(get_windows_home)
+    if [ -n "$win_home" ]; then
+      win_lad="$win_home/AppData/Local"
+    fi
+  fi
+  echo "$win_lad"
+}
+
+
 # --- Define Backup Directories ---
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="$HOME/.config/mu-vim-backup/$TIMESTAMP"
@@ -73,13 +128,12 @@ if [[ "$OS_TYPE" == "linux" ]]; then
 
   log_step "Updating package lists (requires sudo)"
   # Clean up any previously added broken neovim PPAs that would cause update to fail
-  sudo rm -f /etc/apt/sources.list.d/neovim-ppa-*.list
+  sudo rm -f /etc/apt/sources.list.d/neovim-ppa-*
   sudo apt-get update -y
 
   # Install Git, Curl, Unzip, Zsh, and add-apt-repository support
-  log_step "Installing git, curl, unzip, zsh, software-properties-common"
-  sudo apt-get install -y git curl unzip zsh software-properties-common
-
+  log_step "Installing git, curl, unzip, zsh, software-properties-common, build-essential, clang, nodejs, npm"
+  sudo apt-get install -y git curl unzip zsh software-properties-common build-essential clang nodejs npm
   # Install Neovim >= 0.10
   log_step "Checking Neovim installation"
   IS_NEOVIM_OK=false
@@ -100,32 +154,36 @@ if [[ "$OS_TYPE" == "linux" ]]; then
       if ! sudo add-apt-repository -y ppa:neovim-ppa/stable || ! sudo apt-get update -y || ! sudo apt-get install -y neovim; then
         log_warn "Neovim PPA unavailable or failed. Falling back to pre-built binary."
         # Clean up potentially broken PPA list
-        sudo rm -f /etc/apt/sources.list.d/neovim-ppa-*.list
+        sudo rm -f /etc/apt/sources.list.d/neovim-ppa-*
         sudo apt-get update -y || true
-        curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
-        sudo tar -C /usr/local -xzf nvim-linux64.tar.gz --strip-components=1
-        rm nvim-linux64.tar.gz
+        curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+        sudo tar -C /usr/local -xzf nvim-linux-x86_64.tar.gz --strip-components=1
+        rm nvim-linux-x86_64.tar.gz
       fi
     else
       # Debian fallback: Install pre-built stable binary
       log_step "Installing pre-built Neovim binary for Debian"
-      curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
-      sudo tar -C /usr/local -xzf nvim-linux64.tar.gz --strip-components=1
-      rm nvim-linux64.tar.gz
+      curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+      sudo tar -C /usr/local -xzf nvim-linux-x86_64.tar.gz --strip-components=1
+      rm nvim-linux-x86_64.tar.gz
     fi
     log_success "Neovim installed successfully"
   fi
 
   # Install WezTerm
-  if ! command -v wezterm &> /dev/null; then
-    log_step "Installing WezTerm via apt repository"
-    curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
-    echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
-    sudo apt-get update -y
-    sudo apt-get install -y wezterm
-    log_success "WezTerm installed successfully"
+  if [ "$IS_WSL" = true ]; then
+    log_step "WSL environment: Skipping Linux-side WezTerm installation (runs on Windows host)"
   else
-    log_success "WezTerm already installed"
+    if ! command -v wezterm &> /dev/null; then
+      log_step "Installing WezTerm via apt repository"
+      curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
+      echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
+      sudo apt-get update -y
+      sudo apt-get install -y wezterm
+      log_success "WezTerm installed successfully"
+    else
+      log_success "WezTerm already installed"
+    fi
   fi
 
   # Install JetBrains Mono Nerd Font
@@ -202,22 +260,116 @@ fi
 log_success "Neovim configuration copied to ~/.config/nvim/"
 
 # 2. WezTerm configuration
-create_backup "$HOME/.config/wezterm" "WezTerm (XDG)"
-create_backup "$HOME/.wezterm.lua" "WezTerm (Legacy)"
-mkdir -p "$HOME/.config/wezterm"
-cp wezterm/.wezterm.lua "$HOME/.config/wezterm/wezterm.lua"
+if [ "$IS_WSL" = true ]; then
+  win_home=$(get_windows_home)
+  if [ -n "$win_home" ]; then
+    log_step "WSL detected: Configuring WezTerm on Windows host side"
+    win_config_dir="$win_home/.config/wezterm"
+    win_config_file="$win_config_dir/wezterm.lua"
+    win_legacy_file="$win_home/.wezterm.lua"
+    
+    # Backup existing Windows configs
+    create_backup "$win_config_file" "Windows WezTerm (XDG)"
+    create_backup "$win_legacy_file" "Windows WezTerm (Legacy)"
+    
+    mkdir -p "$win_config_dir"
+    
+    wsl_distro="${WSL_DISTRO_NAME:-Ubuntu}"
+    sed "s/-- config.default_domain = 'WSL:Ubuntu'/config.default_domain = 'WSL:$wsl_distro'/" wezterm/.wezterm.lua > "$win_config_file"
+    
+    # Check if host has a Radeon GPU
+    has_radeon=false
+    if command -v powershell.exe &>/dev/null; then
+      if powershell.exe -NoProfile -Command "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name" 2>/dev/null | grep -q -i "radeon"; then
+        has_radeon=true
+      fi
+    fi
 
-# macOS backup fallback support
-if [[ "$OS_TYPE" == "macos" ]]; then
-  # Symlink to ~/.wezterm.lua as a fallback just in case
-  ln -sf "$HOME/.config/wezterm/wezterm.lua" "$HOME/.wezterm.lua"
+    if [ "$has_radeon" = true ]; then
+      log_success "Radeon GPU detected: Configuring background image for WezTerm"
+      # Copy background image
+      if [ -f "assets/image.png" ]; then
+        cp "assets/image.png" "$win_config_dir/image.png"
+        cp "assets/image.png" "$win_home/image.png"
+      fi
+      # Insert background image settings before 'return config'
+      sed -i '/return config/d' "$win_config_file"
+      cat << 'EOF' >> "$win_config_file"
+config.background = {
+  {
+    source = {
+      File = wezterm.config_dir .. "/image.png",
+    },
+    opacity = 0.15,
+  },
+}
+
+return config
+EOF
+    else
+      log_success "Non-Radeon GPU detected: Utilizing transparent/translucent theme"
+    fi
+
+    log_success "WezTerm configuration copied & optimized for Windows host: $win_config_file"
+    cp "$win_config_file" "$win_legacy_file"
+    log_success "WezTerm configuration fallback copied to legacy path: $win_legacy_file"
+
+    # Create "muvim" launcher command on Windows host side in Microsoft/WindowsApps
+    win_lad=$(get_windows_localappdata)
+    if [ -n "$win_lad" ]; then
+      win_apps_dir="$win_lad/Microsoft/WindowsApps"
+      if [ -d "$win_apps_dir" ]; then
+        log_step "Creating 'muvim' command on Windows host side"
+        cat <<EOF > "$win_apps_dir/muvim.cmd"
+@echo off
+rem Launch muvim inside WSL Ubuntu via WezTerm GUI or direct wsl terminal
+if defined WEZTERM_PANE (
+    wsl -d $wsl_distro nvim %*
+) else (
+    where wezterm >nul 2>nul
+    if %ERRORLEVEL% equ 0 (
+        start "" wezterm start -- cmd.exe /c wsl -d $wsl_distro nvim %*
+    ) else (
+        wsl -d $wsl_distro nvim %*
+    )
+)
+EOF
+        log_success "Created 'muvim' command on Windows host at: $win_apps_dir/muvim.cmd"
+      else
+        log_warn "Could not locate WindowsApps directory. Skipping 'muvim' host launcher."
+      fi
+    else
+      log_warn "Could not locate Windows LocalAppData directory. Skipping 'muvim' host launcher."
+    fi
+  else
+    log_warn "Could not locate Windows user profile directory. Skipping Windows-side WezTerm configuration."
+  fi
+else
+  create_backup "$HOME/.config/wezterm" "WezTerm (XDG)"
+  create_backup "$HOME/.wezterm.lua" "WezTerm (Legacy)"
+  mkdir -p "$HOME/.config/wezterm"
+  cp wezterm/.wezterm.lua "$HOME/.config/wezterm/wezterm.lua"
+  
+  # macOS backup fallback support
+  if [[ "$OS_TYPE" == "macos" ]]; then
+    # Symlink to ~/.wezterm.lua as a fallback just in case
+    ln -sf "$HOME/.config/wezterm/wezterm.lua" "$HOME/.wezterm.lua"
+  fi
+  log_success "WezTerm configuration copied to ~/.config/wezterm/wezterm.lua"
 fi
-log_success "WezTerm configuration copied to ~/.config/wezterm/wezterm.lua"
 
 # 3. Zsh configuration
 create_backup "$HOME/.zshrc" "Zsh"
 cp zsh/.zshrc "$HOME/.zshrc"
 log_success "Zsh configuration copied to ~/.zshrc"
+
+# 4. Create muvim command inside the distro
+log_step "Creating 'muvim' shortcut inside the distro"
+sudo ln -sf "$(command -v nvim)" /usr/local/bin/muvim || {
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$(command -v nvim)" "$HOME/.local/bin/muvim"
+}
+log_success "Shortcut 'muvim' created inside the distro"
 
 # --- INSTALL COMPLETED ---
 

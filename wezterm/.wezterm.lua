@@ -20,7 +20,8 @@ config.webgpu_power_preference = "HighPerformance"
 config.color_scheme = "Catppuccin Mocha"
 
 -- Window appearance customizations
-config.window_background_opacity = 0.95 -- Slight transparency (0.0 to 1.0)
+config.window_background_opacity = 0.60 -- Translucent background (0.0 to 1.0)
+config.win32_system_backdrop = "Acrylic" -- Premium blur effect on Windows (Acrylic/Mica/Tabbed/Disable)
 config.window_padding = {
   left = 12,
   right = 12,

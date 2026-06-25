@@ -64,7 +64,7 @@ curl -fsSL https://raw.githubusercontent.com/Opensource-NITJ/mu-vim/main/install
 #### Windows WSL2 (Ubuntu layer)
 1. Run `wsl --install` in Windows PowerShell (if WSL is not yet active).
 2. Install WezTerm on the **Windows host** (e.g. `winget install wez.wezterm`).
-3. Run the following command inside your WSL Ubuntu shell terminal:
+3. Run the following command inside your Windows host terminal (e.g. Git Bash in WezTerm) or directly inside your WSL Ubuntu shell:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Opensource-NITJ/mu-vim/main/install_wsl.sh | bash
 ```
@@ -89,7 +89,7 @@ irm https://raw.githubusercontent.com/Opensource-NITJ/mu-vim/main/install.ps1 | 
 
 ## 4. Keymap Cheatsheet
 
-Below is the curated keymap menu configured in [keymaps.lua](file:///home/karthik-kanithi/.gemini/antigravity-cli/scratch/mu-vim/nvim/lua/core/keymaps.lua) and individual plugin files.
+Below is the curated keymap menu configured in [keymaps.lua](nvim/lua/core/keymaps.lua) and individual plugin files.
 
 ### General & Navigation
 - `Space` is the **Leader Key** (written as `<leader>` in commands).
@@ -162,7 +162,7 @@ GitHub Copilot is included but **disabled by default** to keep your editor clean
    ```
 2. **Authorize**: Copy the authorization code shown in Neovim and log in to your GitHub account via your web browser.
 3. **Turn On**: Press `<leader>cp` in normal mode. You will receive an editor notification stating `GitHub Copilot Enabled`.
-4. **Permanent Opt-In**: To enable Copilot permanently on startup, open [copilot.lua](file:///home/karthik-kanithi/.gemini/antigravity-cli/scratch/mu-vim/nvim/lua/plugins/copilot.lua) and comment out `vim.cmd("Copilot disable")`.
+4. **Permanent Opt-In**: To enable Copilot permanently on startup, open [copilot.lua](nvim/lua/plugins/copilot.lua) and comment out `vim.cmd("Copilot disable")`.
 
 ---
 
@@ -193,19 +193,19 @@ Add a screenshot or video demonstration of `mu-vim` here to show off the visual 
 Once you get comfortable with the default layout, you can easily customize and extend it:
 
 ### Changing Editor Options
-To edit default settings (like tab widths, line numbering, or mouse settings), open [options.lua](file:///home/karthik-kanithi/.gemini/antigravity-cli/scratch/mu-vim/nvim/lua/core/options.lua). For example, to enable line wrapping:
+To edit default settings (like tab widths, line numbering, or mouse settings), open [options.lua](nvim/lua/core/options.lua). For example, to enable line wrapping:
 ```lua
 vim.opt.wrap = true
 ```
 
 ### Adding Custom Keymaps
-Open [keymaps.lua](file:///home/karthik-kanithi/.gemini/antigravity-cli/scratch/mu-vim/nvim/lua/core/keymaps.lua) and add your bindings using Neovim's mapping helper. Make sure to specify a `desc` parameter so it registers with the Which-Key popup:
+Open [keymaps.lua](nvim/lua/core/keymaps.lua) and add your bindings using Neovim's mapping helper. Make sure to specify a `desc` parameter so it registers with the Which-Key popup:
 ```lua
 vim.keymap.set("n", "<leader>my", ":echo 'Hello!'<CR>", { desc = "Custom greeting shortcut" })
 ```
 
 ### Installing New Plugins
-To add a new plugin, create a new `.lua` file inside [plugins/](file:///home/karthik-kanithi/.gemini/antigravity-cli/scratch/mu-vim/nvim/lua/plugins/) (e.g. `plugins/markdown.lua`). Use the standard `lazy.nvim` syntax:
+To add a new plugin, create a new `.lua` file inside [plugins/](nvim/lua/plugins/) (e.g. `plugins/markdown.lua`). Use the standard `lazy.nvim` syntax:
 ```lua
 return {
   {
@@ -216,10 +216,54 @@ return {
 ```
 After saving, restart Neovim and `lazy.nvim` will automatically download and activate the new plugin.
 
+### WezTerm Customization
+WezTerm can be customized by editing its Lua configuration file. Depending on your Operating System, WezTerm loads the configuration from:
+
+| Operating System | Configuration Directory | Config File Path |
+| :--- | :--- | :--- |
+| **Windows Host (WSL & Native)** | `%USERPROFILE%\.config\wezterm\` | `%USERPROFILE%\.config\wezterm\wezterm.lua` <br>(Fallback: `%USERPROFILE%\.wezterm.lua`) |
+| **Linux (Native)** | `~/.config/wezterm/` | `~/.config/wezterm/wezterm.lua` <br>(Fallback: `~/.wezterm.lua`) |
+| **macOS** | `~/.config/wezterm/` | `~/.config/wezterm/wezterm.lua` <br>(Fallback: `~/.wezterm.lua`) |
+
+#### Common Configuration Options
+
+- **Font and Font Size**:
+  Edit the font face or size (e.g., in [wezterm.lua](wezterm/.wezterm.lua)):
+  ```lua
+  config.font = wezterm.font("JetBrains Mono")
+  config.font_size = 14.0
+  ```
+
+- **Color Scheme**:
+  Choose from hundreds of built-in schemes:
+  ```lua
+  config.color_scheme = "Catppuccin Mocha" -- or "Tokyo Night", "Dracula", etc.
+  ```
+
+- **Window Transparency & Blur (Acrylic/Mica)**:
+  Make WezTerm translucent and apply system blur effects (Windows only):
+  ```lua
+  config.window_background_opacity = 0.60
+  config.win32_system_backdrop = "Acrylic" -- Options: "Acrylic", "Mica", "Tabbed", "Disable"
+  ```
+
+- **Background Image**:
+  Specify a background image relative to the configuration directory:
+  ```lua
+  config.background = {
+    {
+      source = {
+        File = wezterm.config_dir .. "/image.png",
+      },
+      opacity = 0.15,
+    },
+  }
+  ```
+
 ### Shell Customization
 You can customize command-line tools by appending aliases and local environment variables directly to your system's shell configuration files:
-- **Linux/macOS**: Edit your user configuration at [~/.zshrc](file:///home/karthik-kanithi/.gemini/antigravity-cli/scratch/mu-vim/zsh/.zshrc)
-- **Windows Native**: Edit your profile at [profile.ps1](file:///home/karthik-kanithi/.gemini/antigravity-cli/scratch/mu-vim/powershell/profile.ps1)
+- **Linux/macOS**: Edit your user configuration at [~/.zshrc](zsh/.zshrc)
+- **Windows Native**: Edit your profile at [profile.ps1](powershell/profile.ps1)
 
 ### 💡 The Ultimate Hack (AI-Powered Customization)
 Tired of manually writing Lua boilerplate, configuring tables, or debugging plugin hooks? Simply open the config folder in an AI-powered IDE of your choice, activate its agentic coding tool, and tell it: *"Add a markdown previewer, configure format-on-save, and write it in the mu-vim file structure."* Let the machine do the heavy lifting!
