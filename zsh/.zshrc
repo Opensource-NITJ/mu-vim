@@ -66,17 +66,17 @@ local highlight_paths=(
 )
 
 # Source Autosuggestions if found
-for path in $autosuggest_paths; do
-  if [[ -f "$path" ]]; then
-    source "$path"
+for p in $autosuggest_paths; do
+  if [[ -f "$p" ]]; then
+    source "$p"
     break
   fi
 done
 
 # Source Syntax Highlighting if found
-for path in $highlight_paths; do
-  if [[ -f "$path" ]]; then
-    source "$path"
+for p in $highlight_paths; do
+  if [[ -f "$p" ]]; then
+    source "$p"
     break
   fi
 done
