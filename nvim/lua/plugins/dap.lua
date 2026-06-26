@@ -20,8 +20,15 @@ return {
       "nvim-neotest/nvim-nio", -- Required dependency for dap-ui
       "theHamsta/nvim-dap-virtual-text",
       "mason-org/mason.nvim",
+      "jay-babu/mason-nvim-dap.nvim", -- Auto-installs DAP adapters via Mason
     },
     config = function()
+      -- Auto-install DAP adapters so users don't have to run :MasonInstall manually
+      require("mason-nvim-dap").setup({
+        ensure_installed = { "python", "codelldb" },
+        automatic_installation = true,
+      })
+
       local dap = require("dap")
       local dapui = require("dapui")
       local virtual_text = require("nvim-dap-virtual-text")
@@ -115,7 +122,7 @@ return {
               elseif vim.fn.executable(cwd .. "/.venv/bin/python") == 1 then
                 return cwd .. "/.venv/bin/python"
               end
-              return "python3"
+              return vim.fn.has("win32") == 1 and "python" or "python3"
             end
           end,
         },

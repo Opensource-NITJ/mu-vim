@@ -66,6 +66,6 @@ opt.completeopt = "menu,menuone,noselect" -- Modern menu completion defaults
 -- This is critical for Mason installations, build steps, and terminal execution.
 if vim.fn.has("win32") == 1 then
   opt.shell = "pwsh"
-  opt.shellcmdflag = "-NoLogo -ExecutionPolicy RemoteSigned -Command"
+  opt.shellcmdflag = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -Command"
   opt.shellxquote = ""
 end

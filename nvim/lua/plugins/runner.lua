@@ -178,11 +178,23 @@ return {
 		end
 
 		local function run_in_wezterm(cmd)
-			local wez_cmd = string.format(
-				"wezterm cli split-pane --bottom --percent 30 -- sh -c %s",
-				vim.fn.shellescape(cmd .. "; echo; echo 'Press Enter to exit...'; read REPLY")
-			)
-			vim.fn.jobstart(wez_cmd)
+			if vim.fn.has("win32") == 1 then
+				-- Write the command to a temp .ps1 file to avoid shell quoting issues
+				local tmpdir = os.getenv("TEMP") or os.getenv("TMP") or (os.getenv("USERPROFILE") .. "\\AppData\\Local\\Temp")
+				local tmpfile = tmpdir .. "\\mu_vim_runner.ps1"
+				local f = io.open(tmpfile, "w")
+				if f then
+					f:write(cmd .. "\nWrite-Host ''\nRead-Host 'Press Enter to exit'")
+					f:close()
+				end
+				vim.fn.jobstart('wezterm cli split-pane --bottom --percent 30 -- pwsh -NoLogo -File "' .. tmpfile .. '"')
+			else
+				local wez_cmd = string.format(
+					"wezterm cli split-pane --bottom --percent 30 -- sh -c %s",
+					vim.fn.shellescape(cmd .. "; echo; echo 'Press Enter to exit...'; read REPLY")
+				)
+				vim.fn.jobstart(wez_cmd)
+			end
 		end
 
 		local function run_code(cmd)
@@ -212,33 +224,61 @@ return {
 					local dir = vim.fn.expand("%:p:h")
 					local fileName = vim.fn.expand("%:t")
 					local fileNameWithoutExt = vim.fn.expand("%:t:r")
-					local cmd = string.format(
-						"cd %s && gcc %s -o /tmp/%s && /tmp/%s",
-						vim.fn.shellescape(dir),
-						vim.fn.shellescape(fileName),
-						vim.fn.shellescape(fileNameWithoutExt),
-						vim.fn.shellescape(fileNameWithoutExt)
-					)
+					local cmd
+					if vim.fn.has("win32") == 1 then
+						-- On Windows: output to %TEMP% with .exe extension; use & to invoke the binary
+						cmd = string.format(
+							'cd %s && gcc %s -o "$env:TEMP\\%s.exe" && & "$env:TEMP\\%s.exe"',
+							vim.fn.shellescape(dir),
+							vim.fn.shellescape(fileName),
+							fileNameWithoutExt,
+							fileNameWithoutExt
+						)
+					else
+						cmd = string.format(
+							"cd %s && gcc %s -o /tmp/%s && /tmp/%s",
+							vim.fn.shellescape(dir),
+							vim.fn.shellescape(fileName),
+							vim.fn.shellescape(fileNameWithoutExt),
+							vim.fn.shellescape(fileNameWithoutExt)
+						)
+					end
 					run_code(cmd)
 				end,
 				cpp = function()
 					local dir = vim.fn.expand("%:p:h")
 					local fileName = vim.fn.expand("%:t")
 					local fileNameWithoutExt = vim.fn.expand("%:t:r")
-					local cmd = string.format(
-						"cd %s && g++ %s -o /tmp/%s && /tmp/%s",
-						vim.fn.shellescape(dir),
-						vim.fn.shellescape(fileName),
-						vim.fn.shellescape(fileNameWithoutExt),
-						vim.fn.shellescape(fileNameWithoutExt)
-					)
+					local cmd
+					if vim.fn.has("win32") == 1 then
+						cmd = string.format(
+							'cd %s && g++ %s -o "$env:TEMP\\%s.exe" && & "$env:TEMP\\%s.exe"',
+							vim.fn.shellescape(dir),
+							vim.fn.shellescape(fileName),
+							fileNameWithoutExt,
+							fileNameWithoutExt
+						)
+					else
+						cmd = string.format(
+							"cd %s && g++ %s -o /tmp/%s && /tmp/%s",
+							vim.fn.shellescape(dir),
+							vim.fn.shellescape(fileName),
+							vim.fn.shellescape(fileNameWithoutExt),
+							vim.fn.shellescape(fileNameWithoutExt)
+						)
+					end
 					run_code(cmd)
 				end,
 				py = function()
 					local dir = vim.fn.expand("%:p:h")
 					local fileName = vim.fn.expand("%:t")
-					local cmd =
-						string.format("cd %s && python3 %s", vim.fn.shellescape(dir), vim.fn.shellescape(fileName))
+					local python = vim.fn.has("win32") == 1 and "python" or "python3"
+					local cmd = string.format(
+						"cd %s && %s %s",
+						vim.fn.shellescape(dir),
+						python,
+						vim.fn.shellescape(fileName)
+					)
 					run_code(cmd)
 				end,
 			},
