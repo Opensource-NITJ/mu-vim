@@ -11,7 +11,13 @@ return {
     branch = "0.1.x",
     dependencies = {
       "nvim-lua/plenary.nvim",
-      { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+      {
+        "nvim-telescope/telescope-fzf-native.nvim",
+        -- Windows has no 'make'; use cmake (installed via Scoop) with MinGW
+        build = vim.fn.has("win32") == 1
+          and "cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build"
+          or "make",
+      },
       "nvim-tree/nvim-web-devicons",
     },
     config = function()

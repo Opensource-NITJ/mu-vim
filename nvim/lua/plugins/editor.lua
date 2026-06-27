@@ -32,7 +32,7 @@ return {
           "markdown",
           "markdown_inline",
         },
-        sync_install = false,
+        sync_install = true,
         highlight = {
           enable = true,       -- Enable syntax highlighting
           additional_vim_regex_highlighting = false,
